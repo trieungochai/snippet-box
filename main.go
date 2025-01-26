@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 // Define a home handler function which writes a byte slice containing
@@ -13,7 +15,20 @@ func home(w http.ResponseWriter, r *http.Request) {
 
 // Add a snippetView handler func
 func snippetView(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Display a specific snippet..."))
+	// Extract the value of the id wildcard from the request using r.PathValue()
+	// and try to convert it to an integer using the strconv.Atoi() function.
+	// If it can't be converted to an integer, or the value is less than 1,
+	// we return a 404 page not found response.
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil || id < 1 {
+		http.NotFound(w, r)
+		return
+	}
+
+	// Use the fmt.Sprintf() function to interpolate the id value with a message,
+	// then write it as the HTTP response.
+	msg := fmt.Sprintf("Display a specific snippet with ID %d...", id)
+	w.Write([]byte(msg))
 }
 
 // Add a snippetCreate handler func
@@ -28,7 +43,7 @@ func main() {
 	mux.HandleFunc("/{$}", home) // Restrict this route to exact matches on / only
 
 	// Register the 2 new handler functions and corresponding route patterns with the servemux
-	mux.HandleFunc("/snippet/view", snippetView)
+	mux.HandleFunc("/snippet/view/{id}", snippetView)
 	mux.HandleFunc("/snippet/create", snippetCreate)
 
 	// Print a log message to say that the server is starting.
