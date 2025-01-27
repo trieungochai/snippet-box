@@ -13,3 +13,7 @@ Hello from Snippetbox
 ---
 ### Status code constants
 The `net/http` package provides [constants for HTTP status codes](https://pkg.go.dev/net/http#pkg-constants), which we can use instead of writing the status code number ourselves. Using these constants is good practice because it helps prevent mistakes due to typos, and it can also help make your code clearer and self-documenting especially when dealing with less-commonly-used status codes.
+
+---
+### Customizing headers
+You can also customize the HTTP headers sent to a user by changing the response header map. Probably the most common thing you’ll want to do is include an additional header in the map, which you can do using the `w.Header().Add()` method.
