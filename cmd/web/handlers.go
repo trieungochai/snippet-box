@@ -11,21 +11,29 @@ import (
 func home(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Server", "Go")
 
-	// Use the template.ParseFiles() function to read the template file into a template set.
+	// Initialize a slice containing the paths to the two files.
+	// It's important to note that
+	// the file containing our base template must be the *first* file in the slice.
+	files := []string{
+		"./ui/html/base.tmpl",
+		"./ui/html/pages/home.tmpl",
+	}
+
+	// Use the template.ParseFiles() func to read the files and store the templates in a template set.
+	// Notice that we use ... to pass the contents of the files slice as variadic arguments.
 	// If there's an error, we log the detailed error message,
 	// use the http.Error() function to send an Internal Server Error response to the user,
 	// and then return from the handler so no subsequent code is executed.
-	tmpl, err := template.ParseFiles("./ui/html/pages/home.tmpl")
+	tmpl, err := template.ParseFiles(files...)
 	if err != nil {
 		log.Print(err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 
 		return
 	}
-	// Then we use the Execute() method on the template set to write the template content as the response body.
-	// The last parameter to Execute() represents any dynamic data that we want to pass in,
-	// which for now we'll leave as nil.
-	err = tmpl.Execute(w, nil)
+
+	// Use the ExecuteTemplate() method to write the content of the "base" template as the response body.
+	err = tmpl.ExecuteTemplate(w, "base", nil)
 	if err != nil {
 		log.Print(err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
