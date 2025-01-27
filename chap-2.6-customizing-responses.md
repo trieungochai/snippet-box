@@ -9,3 +9,7 @@ Content-Type: text/plain; charset=utf-8
 
 Hello from Snippetbox
 ```
+
+---
+### Status code constants
+The `net/http` package provides [constants for HTTP status codes](https://pkg.go.dev/net/http#pkg-constants), which we can use instead of writing the status code number ourselves. Using these constants is good practice because it helps prevent mistakes due to typos, and it can also help make your code clearer and self-documenting especially when dealing with less-commonly-used status codes.
