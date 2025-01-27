@@ -17,3 +17,24 @@ The `net/http` package provides [constants for HTTP status codes](https://pkg.go
 ---
 ### Customizing headers
 You can also customize the HTTP headers sent to a user by changing the response header map. Probably the most common thing you’ll want to do is include an additional header in the map, which you can do using the `w.Header().Add()` method.
+
+---
+### Writing response bodies
+So far we’ve been using `w.Write()` to send specific  HTTP response bodies to a user. And while this is the simplest and most fundamental way to send a response, in practice it’s far more common to pass your `http.ResponseWriter` value to another function that writes the response for you.
+
+In fact, there are a lot of functions that you can use to write a response!
+
+The key thing to understand is this… because the `http.ResponseWriter` value in your handlers has a `Write()` method, it satisfies the [io.Writer](https://pkg.go.dev/io#Writer) interface.
+
+Any functions where you see an `io.Writer` parameter, you can pass in your `http.ResponseWriter` value and whatever is being written will subsequently be sent as the body of the HTTP response.
+
+That means you can use standard library functions like [io.WriteString()](https://pkg.go.dev/io#WriteString) and the [fmt.Fprint*()](https://pkg.go.dev/fmt#Fprint) family (all of which accept an `io.Writer` parameter) to write plain-text response bodies too.
+
+```go
+// Instead of this...
+w.Write([]byte("Hello world"))
+
+// You can do this...
+io.WriteString(w, "Hello world")
+fmt.Fprint(w, "Hello world")”
+```

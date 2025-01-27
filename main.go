@@ -29,10 +29,7 @@ func snippetView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Use the fmt.Sprintf() function to interpolate the id value with a message,
-	// then write it as the HTTP response.
-	msg := fmt.Sprintf("Display a specific snippet with ID %d...", id)
-	w.Write([]byte(msg))
+	fmt.Fprintf(w, "Display a specific snippet with ID %d...", id)
 }
 
 // Add a snippetCreate handler func
