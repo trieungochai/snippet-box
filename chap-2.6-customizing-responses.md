@@ -38,3 +38,49 @@ w.Write([]byte("Hello world"))
 io.WriteString(w, "Hello world")
 fmt.Fprint(w, "Hello world")”
 ```
+
+---
+### Content sniffing
+In order to automatically set the Content-Type header, Go content sniffs the response body with the [http.DetectContentType()](https://pkg.go.dev/net/http#DetectContentType) function. If this function can’t guess the content type, Go will fall back to setting the header `Content-Type: application/octet-stream` instead.
+
+The `http.DetectContentType()` function generally works quite well, but a common gotcha for web developers is that it can’t distinguish JSON from plain text. So, by default, JSON responses will be sent with a `Content-Type: text/plain; charset=utf-8` header. You can prevent this from happening by setting the correct header manually in your handler like so:
+
+```go
+w.Header().Set("Content-Type", "application/json")
+w.Write([]byte(`{"name":"Alex"}`))”
+```
+
+---
+### Manipulating the header map
+
+```
+// Set a new cache-control header. If an existing "Cache-Control" header exists
+// it will be overwritten.
+w.Header().Set("Cache-Control", "public, max-age=31536000")
+
+// In contrast, the Add() method appends a new "Cache-Control" header and can
+// be called multiple times.
+w.Header().Add("Cache-Control", "public")
+w.Header().Add("Cache-Control", "max-age=31536000")
+
+// Delete all values for the "Cache-Control" header.
+w.Header().Del("Cache-Control")
+
+// Retrieve the first value for the "Cache-Control" header.
+w.Header().Get("Cache-Control")
+
+// Retrieve a slice of all values for the "Cache-Control" header.
+w.Header().Values("Cache-Control")
+```
+
+---
+### Header canonicalization
+When you’re using the `Set()`, `Add()`, `Del()`, `Get()` and `Values()` methods on the header map, the header name will always be canonicalized using the [textproto.CanonicalMIMEHeaderKey()](https://pkg.go.dev/net/textproto#CanonicalMIMEHeaderKey) function. This converts the first letter and any letter following a hyphen to upper case, and the rest of the letters to lowercase. This has the practical implication that when calling these methods the header name is case-insensitive.
+
+If you need to avoid this canonicalization behavior, you can edit the underlying header map directly. It has the type `map[string][]string` behind the scenes. For example:
+
+```go
+w.Header()["X-XSS-Protection"] = []string{"1; mode=block"}
+```
+
+> Note: If a `HTTP/2` connection is being used, Go will always automatically convert the header names and values to lowercase for you when writing the response, as per the [HTTP/2 specifications](https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2).
