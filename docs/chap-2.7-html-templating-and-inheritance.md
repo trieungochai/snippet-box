@@ -1,0 +1,1 @@
+Use Go’s [html/template](https://pkg.go.dev/html/template) package, which provides a family of functions for safely parsing and rendering HTML templates. We can use the functions in this package to parse the template file and then execute the template.
