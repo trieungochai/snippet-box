@@ -16,6 +16,8 @@ func home(w http.ResponseWriter, r *http.Request) {
 	// the file containing our base template must be the *first* file in the slice.
 	files := []string{
 		"./ui/html/base.tmpl",
+		// Include the navigation partial in the template files.
+		"./ui/html/partials/nav.tmpl",
 		"./ui/html/pages/home.tmpl",
 	}
 
