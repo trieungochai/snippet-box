@@ -17,3 +17,5 @@ The easiest way to accept and parse a command-line flag in your application is w
 addr := flag.String("addr", ":4000", "HTTP network address")
 ```
 This essentially defines a new command-line flag with the name `addr`, a default value of `":4000"` and some short help text explaining what the flag controls. The value of the flag will be stored in the `addr` variable at runtime.
+
+>Note: Ports `0-1023` are restricted and (typically) can only be used by services which have root privileges. If you try to use one of these ports you should get a bind: permission denied error message on start-up.
