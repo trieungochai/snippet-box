@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 )
 
 func main() {
@@ -18,6 +20,11 @@ func main() {
 	// otherwise it will always contain the default value of ":4000".
 	// If any errors are encountered during parsing the application will be terminated.
 	flag.Parse()
+
+	// Use the slog.New() function to initialize a new structured logger,
+	// which writes to the standard out stream and uses the default settings.
+	loggerHandler := slog.NewTextHandler(os.Stdout, nil)
+	logger := slog.New(loggerHandler)
 
 	mux := http.NewServeMux()
 
@@ -42,5 +49,10 @@ func main() {
 
 	// And we pass the dereferenced addr pointer to http.ListenAndServe() too.
 	err := http.ListenAndServe(*addr, mux)
-	log.Fatal(err)
+
+	// And we also use the Error() method to log any error message returned by
+	// http.ListenAndServe() at Error severity (with no additional attributes),
+	// and then call os.Exit(1) to terminate the application with exit code 1.
+	logger.Error(err.Error())
+	os.Exit(1)
 }
