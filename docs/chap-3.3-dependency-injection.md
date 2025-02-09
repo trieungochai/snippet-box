@@ -123,3 +123,45 @@ Most web applications will have multiple dependencies that their handlers need t
 There are a few different ways to do this, the simplest being to just put the dependencies in global variables. But in general, it is good practice to inject dependencies into your handlers. It makes your code more explicit, less error-prone, and easier to unit test than if you use global variables.
 
 For applications where all your handlers are in the same package, like ours, a neat way to inject dependencies is to put them into a custom application struct, and then define your handler functions as methods against application.
+
+---
+### Closures for DI
+The pattern that we’re using to inject dependencies won’t work if your handlers are spread across multiple packages. In that case, an alternative approach is to create a standalone config package which exports an Application struct, and have your handler functions close over this to form a closure. Very roughly:
+
+``go
+// package config
+
+type Application struct {
+    Logger *slog.Logger
+}
+```
+
+```go
+// package foo
+
+func ExampleHandler(app *config.Application) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        ...
+        ts, err := template.ParseFiles(files...)
+        if err != nil {
+            app.Logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+            http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+            return
+        }
+        ...
+    }
+}
+```
+
+```go
+// package main
+
+func main() {
+    app := &config.Application{
+        Logger: slog.New(slog.NewTextHandler(os.Stdout, nil)),
+    }
+    ...
+    mux.Handle("/", foo.ExampleHandler(app))
+    ...
+}
+```
