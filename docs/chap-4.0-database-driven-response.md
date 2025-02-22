@@ -172,3 +172,33 @@ $ go get github.com/foo/bar@none
 Or if you’ve removed all references to the package in your code, you can run `go mod tidy`, which will automatically remove any unused packages from your go.mod and `go.sum` files.
 
 ---
+### 4.4 Creating a database connection pool
+Now that the MySQL database is all set up and we’ve got a driver installed, the natural next step is to connect to the database from our web application.
+
+To do this we need Go’s [sql.Open()](https://pkg.go.dev/database/sql#Open) function, which you use a bit like this:
+```go
+// The sql.Open() function initializes a new sql.DB object, which is essentially a pool of database connections.
+db, err := sql.Open("mysql", "web:pass@/snippetbox?parseTime=true")
+    if err != nil {
+        ...
+}
+```
+- The 1st parameter to `sql.Open()` is the `driver name` and the 2nd parameter is the `data source name` (sometimes also called a `connection string` or `DSN`) which describes how to connect to your database.
+- The format of the data source name will depend on which database and driver you’re using. Typically, you can find information and examples in the documentation for your specific driver. For the driver we’re using you can find that documentation [here](https://github.com/go-sql-driver/mysql#dsn-data-source-name).
+- The `parseTime=true` part of the DSN above is a `driver-specific` parameter which instructs our driver to convert `SQL TIME` and `DATE` fields to Go `time.Time` objects.
+- The `sql.Open()` function returns a [sql.DB](https://pkg.go.dev/database/sql#DB) object. This isn’t a database connection — it’s a `pool of many connections`. This is an important difference to understand. Go manages the connections in this pool as needed, automatically opening and closing connections to the database via the driver.
+- The connection pool is safe for concurrent access, so you can use it from web application handlers safely.
+- The connection pool is intended to be long-lived. In a web application it’s normal to initialize the connection pool in your `main()` function and then pass the pool to your handlers. You shouldn’t call `sql.Open()` in a short-lived HTTP handler itself — it would be a waste of memory and network resources.
+
+There’re a few things about this code which are interesting:
+- Notice how the import path for our driver is prefixed with an underscore? This is because our `main.go` file doesn’t actually use anything in the `mysql` package. So if we try to import it normally the Go compiler will raise an error. However, we need the driver’s `init()` function to run so that it can register itself with the `database/sql` package. The trick to getting around this is to alias the package name to the blank identifier, like we are here. This is standard practice for most of Go’s SQL drivers.
+    ```go
+    package main
+
+    import (
+        // ...
+        _ "github.com/go-sql-driver/mysql"
+    )
+    ```
+- The `sql.Open()` function doesn’t actually create any connections, all it does is initialize the pool for future use. Actual connections to the database are established lazily, as and when needed for the first time. So to verify that everything is set up correctly we need to use the [db.Ping()](https://pkg.go.dev/database/sql#DB.Ping) method to create a connection and check for any errors. If there is an error, we call [db.Close()](https://pkg.go.dev/database/sql#DB.Close) to close the connection pool and return the error.
+- Going back to the `main()` function, at this moment in time the call to defer `db.Close()` is a bit superfluous. Our application is only ever terminated by a signal interrupt (i.e. `Ctrl+C`) or by `os.Exit(1)`. In both of those cases, the program exits immediately and deferred functions are never run. But making sure to always close the connection pool is a good habit to get into, and it could be beneficial in the future if you add a graceful shutdown to your application.
