@@ -126,9 +126,9 @@ For applications where all your handlers are in the same package, like ours, a n
 
 ---
 ### Closures for DI
-The pattern that we’re using to inject dependencies won’t work if your handlers are spread across multiple packages. In that case, an alternative approach is to create a standalone config package which exports an Application struct, and have your handler functions close over this to form a closure. Very roughly:
+The pattern that we’re using to inject dependencies won’t work if your handlers are spread across multiple packages. In that case, an alternative approach is to create a standalone config package which exports an Application struct, and have your handler functions close over this to form a closure.
 
-``go
+```go
 // package config
 
 type Application struct {
