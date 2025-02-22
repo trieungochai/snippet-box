@@ -97,3 +97,10 @@ mysql> SELECT id, title, expires_at FROM snippets;
 mysql> DROP TABLE snippets;
 ERROR 1142 (42000): DROP command denied to user 'web'@'localhost' for table 'snippets'
 ```
+
+---
+## 4.2 Installing a database driver
+To use MySQL from our Go web application we need to install a `database driver`. This essentially acts as a middleman, translating commands between Go and the MySQL database itself.
+
+You can find a comprehensive [list of available drivers](https://go.dev/wiki/SQLDrivers) on the Go wiki, but for our application we’ll use the popular [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql) driver.
+
