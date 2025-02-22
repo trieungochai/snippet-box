@@ -104,3 +104,71 @@ To use MySQL from our Go web application we need to install a `database driver`.
 
 You can find a comprehensive [list of available drivers](https://go.dev/wiki/SQLDrivers) on the Go wiki, but for our application we’ll use the popular [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql) driver.
 
+---
+## 4.3 Modules and reproducible builds
+Now that the MySQL driver is installed, let’s take a look at the `go.mod` file. You should see a require block with two lines containing the path and exact version number of the packages that you downloaded:
+```go
+module snippetbox.t10i.net
+
+go 1.22.4
+
+require (
+	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/go-sql-driver/mysql v1.9.0 // indirect
+)
+```
+
+These lines in `go.mod` essentially tell the Go command exactly which version of a package should be used when you run a command like `go run`, `go test` or `go build` from your project directory.
+
+This makes it easy to have multiple projects on the same machine where different versions of the same package are used. For example, this project is using `v1.8.1` of the MySQL driver, but you could have another codebase on your computer which uses v1.5.0 and that would be A-OK.
+
+> Note: The `// indirect` annotation indicates that a package doesn’t directly appear in any import statement in your codebase. Right now, we still haven’t written any code that actually uses either the `github.com/go-sql-driver/mysql` or `filippo.io/edwards25519` packages, which is why they are both marked as indirect dependencies. We’ll fix that in the next chapter.
+
+You’ll also see that a new file has been created in the root of your project directory called `go.sum`.
+
+This `go.sum` file contains the cryptographic checksums representing the content of the required packages.
+```go
+filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
+filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
+github.com/go-sql-driver/mysql v1.9.0 h1:Y0zIbQXhQKmQgTp44Y1dp3wTXcn804QoTptLZT1vtvo=
+github.com/go-sql-driver/mysql v1.9.0/go.mod h1:pDetrLJeA3oMujJuvXc8RJoasr589B6A9fwzD3QMrqw=
+```
+The `go.sum` file isn’t designed to be human-editable and generally you won’t need to open it. But it serves 2 useful functions:
+- If you run the `go mod verify` command from your terminal, this will verify that the checksums of the downloaded packages on your machine match the entries in `go.sum`, so you can be confident that they haven’t been altered.
+    ```
+    $ go mod verify
+    all modules verified
+    ```
+- If someone else needs to download all the dependencies for the project — which they can do by running go mod download — they will get an error if there is any mismatch between the packages they are downloading and the checksums in the file.
+
+So, in summary:
+- You (or someone else in the future) can run `go mod` download to download the exact versions of all the packages that your project needs.
+- You can run `go mod verify` to ensure that nothing in those downloaded packages has been changed unexpectedly.
+- Whenever you run `go run`, `go test` or `go build`, the exact package versions listed in `go.mod` will always be used.
+
+And those things together makes it much easier to reliably create [reproducible builds](https://en.wikipedia.org/wiki/Reproducible_builds) of your Go applications.
+
+### Upgrading packages
+Once a package has been downloaded and added to your `go.mod` file the package and version are `‘fixed’`. But there are many reasons why you might want to upgrade to use a newer version of a package in the future.
+
+To upgrade to latest available minor or patch release of a package, you can simply run go get with the `-u` flag like so:
+```
+$ go get -u github.com/foo/bar
+```
+
+Or alternatively, if you want to upgrade to a specific version then you should run the same command but with the appropriate @version suffix. For example:
+```
+$ go get -u github.com/foo/bar@v2.0.0
+```
+
+### Removing unused packages
+Sometimes you might go get a package only to realize later that you don’t need it anymore. When this happens you’ve got two choices.
+
+You could either run go get and postfix the package path with `@none`, like so:
+```
+$ go get github.com/foo/bar@none
+```
+
+Or if you’ve removed all references to the package in your code, you can run `go mod tidy`, which will automatically remove any unused packages from your go.mod and `go.sum` files.
+
+---
