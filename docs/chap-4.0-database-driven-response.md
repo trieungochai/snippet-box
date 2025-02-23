@@ -172,7 +172,7 @@ $ go get github.com/foo/bar@none
 Or if you’ve removed all references to the package in your code, you can run `go mod tidy`, which will automatically remove any unused packages from your go.mod and `go.sum` files.
 
 ---
-### 4.4 Creating a database connection pool
+## 4.4 Creating a database connection pool
 Now that the MySQL database is all set up and we’ve got a driver installed, the natural next step is to connect to the database from our web application.
 
 To do this we need Go’s [sql.Open()](https://pkg.go.dev/database/sql#Open) function, which you use a bit like this:
@@ -202,3 +202,14 @@ There’re a few things about this code which are interesting:
     ```
 - The `sql.Open()` function doesn’t actually create any connections, all it does is initialize the pool for future use. Actual connections to the database are established lazily, as and when needed for the first time. So to verify that everything is set up correctly we need to use the [db.Ping()](https://pkg.go.dev/database/sql#DB.Ping) method to create a connection and check for any errors. If there is an error, we call [db.Close()](https://pkg.go.dev/database/sql#DB.Close) to close the connection pool and return the error.
 - Going back to the `main()` function, at this moment in time the call to defer `db.Close()` is a bit superfluous. Our application is only ever terminated by a signal interrupt (i.e. `Ctrl+C`) or by `os.Exit(1)`. In both of those cases, the program exits immediately and deferred functions are never run. But making sure to always close the connection pool is a good habit to get into, and it could be beneficial in the future if you add a graceful shutdown to your application.
+
+---
+## 4.5 Designing a Database Model
+In this chapter we’re going to sketch out a database model for our project.
+
+If you don’t like the term `model`, you might want to think of it as a `service layer` or `data access layer` instead. Whatever you prefer to call it, the idea is that we will encapsulate the code for working with MySQL in a separate package to the rest of our application.
+
+![models](models.png)
+
+> Remember: The internal directory is being used to hold ancillary non-application-specific code, which could potentially be reused. A database model which could be used by other applications in the future (like a command line interface application) fits the bill here.
+
