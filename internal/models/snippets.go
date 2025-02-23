@@ -24,8 +24,8 @@ type SnippetModel struct {
 // Returns:
 // 1. The ID of the newly inserted snippet (integer).
 // 2. An error if something goes wrong.
-func (sm *SnippetModel) Insert(title string, content string, expires_at string) (int, error) {
-	queryStmt := `INSERT INTO snippets (title, content, created, expires)
+func (sm *SnippetModel) Insert(title string, content string, expires_at int) (int, error) {
+	queryStmt := `INSERT INTO snippets (title, content, created_at, expires_at)
     VALUES(?, ?, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY))`
 
 	// Use the Exec() method on the embedded connection pool to execute the statement.
