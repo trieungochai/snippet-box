@@ -258,3 +258,13 @@ Behind the scenes, the `DB.Exec()` method works in 3 steps:
 _, err := m.DB.Exec("INSERT INTO ... VALUES ($1, $2, $3)", ..
 ```
 
+---
+## 4.7 Single-record SQL queries
+Behind the scenes of `rows.Scan()` your driver will automatically convert the raw output from the SQL database to the required native Go types. So long as you’re sensible with the types that you’re mapping between SQL and Go, these conversions should generally Just Work. Usually:
+- CHAR, VARCHAR and TEXT map to string.
+- BOOLEAN maps to bool.
+- INT maps to int; BIGINT maps to int64.
+- DECIMAL and NUMERIC map to float.
+- TIME, DATE and TIMESTAMP map to time.Time.
+
+As an aside, you might be wondering why we’re returning the `ErrNoRecord` error from our `SnippetModel.Get()` method, instead of `sql.ErrNoRows` directly. The reason is to help encapsulate the model completely, so that our handlers aren’t concerned with the underlying datastore or reliant on datastore-specific errors (like `sql.ErrNoRows`) for its behavior.
