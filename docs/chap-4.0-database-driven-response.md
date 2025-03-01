@@ -268,3 +268,33 @@ Behind the scenes of `rows.Scan()` your driver will automatically convert the ra
 - TIME, DATE and TIMESTAMP map to time.Time.
 
 As an aside, you might be wondering why we’re returning the `ErrNoRecord` error from our `SnippetModel.Get()` method, instead of `sql.ErrNoRows` directly. The reason is to help encapsulate the model completely, so that our handlers aren’t concerned with the underlying datastore or reliant on datastore-specific errors (like `sql.ErrNoRows`) for its behavior.
+
+---
+## 4.9 Transactions and other details
+### The database/sql package
+
+As you’re probably starting to realize, the `database/sql` package essentially provides a standard interface between your Go application and the world of SQL databases.
+
+So long as you use the `database/sql` package, the Go code you write will generally be portable and will work with any kind of SQL database — whether it’s MySQL, PostgreSQL, SQLite or something else. This means that your application isn’t so tightly coupled to the database that you’re currently using, and the theory is that you can swap databases in the future without re-writing all of your code (driver-specific quirks and SQL implementations aside).
+
+It’s important to note that while `database/sql` generally does a good job of providing a standard interface for working with SQL databases, there are some idiosyncrasies in the way that different drivers and databases operate. It’s always a good idea to read over the documentation for a new driver to understand any quirks and edge cases before you begin using it.
+
+### Verbosity
+If you’re coming from Ruby, Python or PHP, the code for querying SQL databases may feel a bit verbose, especially if you’re used to dealing with an abstraction layer or ORM.
+
+But the upside of the verbosity is that our code is non-magical; we can understand and control exactly what is going on. And with a bit of time, you’ll find that the patterns for making SQL queries become familiar and you can copy-and-paste from previous work, or use developer tools like GitHub copilot to write the first draft of the code for you.
+
+If the verbosity really is starting to grate on you, you might want to consider trying the [jmoiron/sqlx](https://github.com/jmoiron/sqlx) package. It’s well designed and provides some good extensions that make working with SQL queries quicker and easier. Another, newer, option you may want to consider is the [blockloop/scan](https://github.com/blockloop/scan) package.
+
+### Managing null values
+Go doesn’t do very well is managing NULL values in database records.
+
+Let’s pretend that the title column in our snippets table contains a NULL value in a particular row. If we queried that row, then `rows.Scan()` would return the following error because it can’t convert NULL into a string:
+```
+sql: Scan error on column index 1: unsupported Scan, storing driver.Value type
+&lt;nil&gt; into type *string
+```
+
+Very roughly, the fix for this is to change the field that you’re scanning into from a string to a `sql.NullString` type. See [this gist](https://gist.github.com/alexedwards/dc3145c8e2e6d2fd6cd9) for a working example.
+
+But, as a rule, the easiest thing to do is simply avoid NULL values altogether. Set NOT NULL constraints on all your database columns, like we have done in this book, along with sensible DEFAULT values as necessary.
