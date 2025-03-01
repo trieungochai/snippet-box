@@ -50,9 +50,9 @@ func (sm *SnippetModel) Insert(title string, content string, expires_at int) (in
 	return int(id), nil
 }
 
-func (sm *SnippetModel) Get(id string) (Snippet, error) {
+func (sm *SnippetModel) Get(id int) (Snippet, error) {
 	queryStmt := `SELECT id, title, content, created_at, expires_at FROM snippets
-	WHERE expires_at > UTCT_TIMESTAMP() and id = ?`
+	WHERE expires_at > UTC_TIMESTAMP() and id = ?`
 	// Use the QueryRow() method on the connection pool to execute our SQL statement,
 	// passing in the untrusted id variable as the value for the placeholder param.
 	// This returns a pointer to a sql.Row object which holds the result from the db.
