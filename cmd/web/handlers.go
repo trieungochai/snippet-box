@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"text/template"
 
 	// "text/template"
 
@@ -79,8 +80,27 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Write the snippet data as a plain-text HTTP response body.
-	fmt.Fprintf(w, "%+v", snippet)
+	// Initialize a slice containing the paths to the view.tmpl file,
+	// plus the base layout and navigation partial that we made earlier.
+	files := []string{
+		"./ui/html/base.tmpl",
+		"./ui/html/partials/nav.tmpl",
+		"./ui/html/pages/view.tmpl",
+	}
+
+	// Parse the template files...
+	tmpl, err := template.ParseFiles(files...)
+	if err != nil {
+		app.serverError(w, r, err)
+		return
+	}
+
+	// And then execute them.
+	// Notice how we are passing in the snippet data (a models.Snippet struct) as the final parameter?
+	err = tmpl.ExecuteTemplate(w, "base", snippet)
+	if err != nil {
+		app.serverError(w, r, err)
+	}
 }
 
 // Change the signature of the home handler
