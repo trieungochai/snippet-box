@@ -31,3 +31,32 @@ func myMiddleware(next http.Handler) http.Handler {
 - In the final line of code, we then convert this closure to a `http.Handler` and return it using the `http.HandlerFunc()` adapter.
 
 If this feels confusing, you can think of it more simply: `myMiddleware()` is a function that accepts the next handler in a chain as a parameter. It returns a handler which executes some logic and then calls the next handler.
+
+### Simplifying the middleware
+A tweak to this pattern is to use an anonymous function inside `myMiddleware()` middleware:
+```go   
+func myMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        // TODO: Execute our middleware logic here...
+        next.ServeHTTP(w, r)
+    })
+}
+```
+This pattern is very common in the wild, and the one that you’ll probably see most often if you’re reading the source code of other applications or third-party packages.
+
+### Positioning the middleware
+It’s important to explain that where you position the middleware in the chain of handlers will affect the behavior of your application.
+
+If you position your middleware before the `servemux` in the chain then it will act on every request that your application receives.
+```
+myMiddleware → servemux → application handler
+```
+
+A good example of where this would be useful is middleware to log requests — as that’s typically something you would want to do for all requests.
+
+Alternatively, you can position the middleware after the `servemux` in the chain — by wrapping a specific application handler. This would cause your middleware to only be executed for a specific route.
+```
+servemux → myMiddleware → application handler
+```
+
+An example of this would be something like authorization middleware, which you may only want to run on specific routes.
