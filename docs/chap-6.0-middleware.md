@@ -60,3 +60,22 @@ servemux → myMiddleware → application handler
 ```
 
 An example of this would be something like authorization middleware, which you may only want to run on specific routes.
+
+---
+## 6.2 Setting common headers
+Let’s put the pattern we learned in the previous chapter to use, and make some middleware which automatically adds our Server: Go header to every response, along with the following HTTP security headers (inline with current [OWASP guidance](https://owasp.org/www-project-secure-headers/)).
+
+```
+Content-Security-Policy: default-src 'self'; style-src 'self' fonts.googleapis.com; font-src fonts.gstatic.com
+Referrer-Policy: origin-when-cross-origin
+X-Content-Type-Options: nosniff
+X-Frame-Options: deny
+X-XSS-Protection: 0
+```
+- `Content-Security-Policy` (often abbreviated to `CSP`) headers are used to restrict where the resources for your web page (e.g. JavaScript, images, fonts etc) can be loaded from. Setting a strict [CSP](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP) policy helps prevent a variety of cross-site scripting, clickjacking, and other code-injection attacks.
+
+    CSP headers and how they work is a big topic, and I recommend reading [this primer](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP) if you haven’t come across them before. But, in our case, the header tells the browser that it’s OK to load fonts from `fonts.gstatic.com`, stylesheets from `fonts.googleapis.com` and `self` (our own origin), and then `everything else` only from `self`. Inline JavaScript is blocked by default.
+- `Referrer-Policy` is used to control what information is included in a `Referer` header when a user navigates away from your web page. In our case, we’ll set the value to `origin-when-cross-origin`, which means that the full URL will be included for [same-origin requests](https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy), but for all other requests information like the URL path and any query string values will be stripped out.
+- `X-Content-Type-Options: nosniff` instructs browsers to not MIME-type sniff the content-type of the response, which in turn helps to prevent [content-sniffing attacks](https://security.stackexchange.com/questions/7506/using-file-extension-and-mime-type-as-output-by-file-i-b-combination-to-dete/7531#7531).
+- `X-Frame-Options: deny` is used to help prevent [click-jacking ](https://developer.mozilla.org/en-US/docs/Web/Security/Types_of_attacks#click-jacking) attacks in older browsers that don’t support CSP headers.
+- `X-XSS-Protection: 0` is used to disable the blocking of cross-site scripting attacks. Previously it was good practice to set this header to `X-XSS-Protection: 1; mode=block`, but when you’re using CSP headers like we are the [recommendation](https://owasp.org/www-project-secure-headers/#x-xss-protection) is to disable this feature altogether.
