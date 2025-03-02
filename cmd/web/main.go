@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"flag"
+	"html/template"
 	"log/slog"
 	"net/http"
 	"os"
@@ -14,9 +15,11 @@ import (
 // Define an application struct to hold the application-wide dependencies for the web app.
 // Add a snippets field to the application struct.
 // This will allow us to make the SnippetModel object available to our handlers.
+// Add a templateCache field to the application struct.
 type application struct {
-	logger   *slog.Logger
-	snippets *models.SnippetModel
+	logger        *slog.Logger
+	snippets      *models.SnippetModel
+	templateCache map[string]*template.Template
 }
 
 func main() {
@@ -53,11 +56,20 @@ func main() {
 	// so that the connection pool is closed before the main() function exits.
 	defer db.Close()
 
+	// Initialize a new template cache.
+	templateCache, err := newTemplateCache()
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+
 	// Init a new instance of our application struct, containing the dependencies
 	// Init a models.SnippetModel instance containing the connection pool and add it to the application dependencies.
+	// And add it to the application dependencies.
 	app := &application{
-		logger:   logger,
-		snippets: &models.SnippetModel{DB: db},
+		logger:        logger,
+		snippets:      &models.SnippetModel{DB: db},
+		templateCache: templateCache,
 	}
 
 	logger.Info("starting server", "addr", *addr)
