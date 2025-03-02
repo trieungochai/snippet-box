@@ -2,8 +2,14 @@ package main
 
 import "net/http"
 
-// the routes() method return a servermux containing our application routes
-func (app *application) routes() *http.ServeMux {
+// Because we want this middleware to act on every request that is received,
+// we need it to be executed before a request hits our servemux.
+// We want the flow of control through our application to look like:
+// commonHeaders → servemux → application handler
+
+// Update the signature for the routes() method
+// so that it returns a http.Handler instead of *http.ServeMux.
+func (app *application) routes() http.Handler {
 	mux := http.NewServeMux()
 
 	// Create a file server which serves files out of the "./ui/static" directory.
@@ -20,5 +26,8 @@ func (app *application) routes() *http.ServeMux {
 	mux.HandleFunc("GET /snippet/create", app.snippetCreate)
 	mux.HandleFunc("POST /snippet/create", app.snippetCreatePost)
 
-	return mux
+	// Pass the servemux as the 'next' parameter to the commonHeaders middleware.
+	// Because commonHeaders is just a function, and the function returns a http.Handler
+	// we don't need to do anything else.
+	return commonHeaders(mux)
 }
