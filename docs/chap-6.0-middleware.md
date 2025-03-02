@@ -79,3 +79,47 @@ X-XSS-Protection: 0
 - `X-Content-Type-Options: nosniff` instructs browsers to not MIME-type sniff the content-type of the response, which in turn helps to prevent [content-sniffing attacks](https://security.stackexchange.com/questions/7506/using-file-extension-and-mime-type-as-output-by-file-i-b-combination-to-dete/7531#7531).
 - `X-Frame-Options: deny` is used to help prevent [click-jacking ](https://developer.mozilla.org/en-US/docs/Web/Security/Types_of_attacks#click-jacking) attacks in older browsers that don’t support CSP headers.
 - `X-XSS-Protection: 0` is used to disable the blocking of cross-site scripting attacks. Previously it was good practice to set this header to `X-XSS-Protection: 1; mode=block`, but when you’re using CSP headers like we are the [recommendation](https://owasp.org/www-project-secure-headers/#x-xss-protection) is to disable this feature altogether.
+
+### Flow of control
+It’s important to know that when the last handler in the chain returns, control is passed back up the chain in the reverse direction. So when our code is being executed the flow of control actually looks like this:
+```
+commonHeaders → servemux → application handler → servemux → commonHeaders
+```
+
+In any middleware handler, code which comes before `next.ServeHTTP()` will be executed on the way down the chain, and any code after `next.ServeHTTP()` — or in a deferred function — will be executed on the way back up.
+```go
+func myMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        // Any code here will execute on the way down the chain.
+        next.ServeHTTP(w, r)
+        // Any code here will execute on the way back up the chain.
+    })
+}
+```
+
+### Early returns
+Another thing to mention is that if you call return in your middleware function before you call `next.ServeHTTP()`, then the chain will stop being executed and control will flow back upstream.
+
+As an example, a common use-case for early returns is authentication middleware which only allows execution of the chain to continue if a particular check is passed. For instance:
+
+```go
+func myMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        // If the user isn't authorized, send a 403 Forbidden status and
+        // return to stop executing the chain.
+        if !isAuthorized(r) {
+            w.WriteHeader(http.StatusForbidden)
+            return
+        }
+
+        // Otherwise, call the next handler in the chain.
+        next.ServeHTTP(w, r)
+    })
+}
+```
+
+### Debugging CSP issues
+While CSP headers are great and you should definitely use them, it’s worth saying that I’ve spent many hours trying to debug problems, only to eventually realize that a critical resource or script is being “blocked by my own CSP rules 🤦.
+
+If you’re working on a project which is using CSP headers, like this one, I recommend keeping your web browser developer tools handy and getting into the habit of checking the logs early on if you run into any unexpected problems. In Firefox, any blocked resources will be shown as an error in the console logs — similar to this:
+![CSP-err](CSP-err.png)
