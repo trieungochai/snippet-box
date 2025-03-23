@@ -3,7 +3,7 @@ When you’re building a web application there’s probably some shared function
 A common way of organizing this shared functionality is to set it up as middleware. This is essentially some self-contained code which independently acts on a request before or after your normal application handlers.
 
 ---
-### 6.1 How middleware works
+## 6.1 How middleware works
 > You can think of a Go web application as a chain of `ServeHTTP()` methods being called one after another.
 
 Currently, in our application, when our server receives a new HTTP request it calls the servemux’s `ServeHTTP()` method. This looks up the relevant handler based on the request method and URL path, and in turn calls that handler’s `ServeHTTP()` method.
@@ -123,3 +123,10 @@ While CSP headers are great and you should definitely use them, it’s worth say
 
 If you’re working on a project which is using CSP headers, like this one, I recommend keeping your web browser developer tools handy and getting into the habit of checking the logs early on if you run into any unexpected problems. In Firefox, any blocked resources will be shown as an error in the console logs — similar to this:
 ![CSP-err](CSP-err.png)
+
+## 6.3 Panic recovery
+In a simple Go application, when your code panics it will result in the application being terminated straight away.
+
+But our web application is a bit more sophisticated. Go’s HTTP server assumes that the effect of any panic is isolated to the goroutine serving the active HTTP request (remember, every request is handled in it’s own goroutine).
+
+Specifically, following a panic our server will log a stack trace to the server error log, unwind the stack for the affected goroutine (calling any deferred functions along the way) and close the underlying HTTP connection. But it won’t terminate the application, so importantly, any panic in your handlers won’t bring down your server.
