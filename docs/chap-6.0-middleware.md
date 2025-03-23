@@ -130,3 +130,28 @@ In a simple Go application, when your code panics it will result in the applicat
 But our web application is a bit more sophisticated. Go’s HTTP server assumes that the effect of any panic is isolated to the goroutine serving the active HTTP request (remember, every request is handled in it’s own goroutine).
 
 Specifically, following a panic our server will log a stack trace to the server error log, unwind the stack for the affected goroutine (calling any deferred functions along the way) and close the underlying HTTP connection. But it won’t terminate the application, so importantly, any panic in your handlers won’t bring down your server.
+
+### Panic recovery in background goroutines
+It’s important to realize that our middleware will only recover panics that happen in the same goroutine that executed the `recoverPanic()` middleware.
+
+If, for example, you have a handler which spins up another goroutine (e.g. to do some background processing), then any panics that happen in the second goroutine will not be recovered — not by the `recoverPanic()` middleware… and not by the panic recovery built into Go HTTP server. They will cause your application to exit and bring down the server.
+
+So, if you are spinning up additional goroutines from within your web application and there is any chance of a panic, you must make sure that you recover any panics from within those too. For example:
+
+```go
+func (app *application) myHandler(w http.ResponseWriter, r *http.Request) {
+    ...
+    // Spin up a new goroutine to do some background processing.
+    go func() {
+        defer func() {
+            if err := recover(); err != nil {
+                app.logger.Error(fmt.Sprint(err))
+            }
+        }()
+
+        doSomeBackgroundProcessing()
+    }()
+
+    w.Write([]byte("OK"))
+}
+```
