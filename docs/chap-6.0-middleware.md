@@ -3,7 +3,7 @@ When you’re building a web application there’s probably some shared function
 A common way of organizing this shared functionality is to set it up as middleware. This is essentially some self-contained code which independently acts on a request before or after your normal application handlers.
 
 ---
-### 6.1 How middleware works
+## 6.1 How middleware works
 > You can think of a Go web application as a chain of `ServeHTTP()` methods being called one after another.
 
 Currently, in our application, when our server receives a new HTTP request it calls the servemux’s `ServeHTTP()` method. This looks up the relevant handler based on the request method and URL path, and in turn calls that handler’s `ServeHTTP()` method.
@@ -123,3 +123,57 @@ While CSP headers are great and you should definitely use them, it’s worth say
 
 If you’re working on a project which is using CSP headers, like this one, I recommend keeping your web browser developer tools handy and getting into the habit of checking the logs early on if you run into any unexpected problems. In Firefox, any blocked resources will be shown as an error in the console logs — similar to this:
 ![CSP-err](CSP-err.png)
+
+## 6.3 Panic recovery
+In a simple Go application, when your code panics it will result in the application being terminated straight away.
+
+But our web application is a bit more sophisticated. Go’s HTTP server assumes that the effect of any panic is isolated to the goroutine serving the active HTTP request (remember, every request is handled in it’s own goroutine).
+
+Specifically, following a panic our server will log a stack trace to the server error log, unwind the stack for the affected goroutine (calling any deferred functions along the way) and close the underlying HTTP connection. But it won’t terminate the application, so importantly, any panic in your handlers won’t bring down your server.
+
+### Panic recovery in background goroutines
+It’s important to realize that our middleware will only recover panics that happen in the same goroutine that executed the `recoverPanic()` middleware.
+
+If, for example, you have a handler which spins up another goroutine (e.g. to do some background processing), then any panics that happen in the second goroutine will not be recovered — not by the `recoverPanic()` middleware… and not by the panic recovery built into Go HTTP server. They will cause your application to exit and bring down the server.
+
+So, if you are spinning up additional goroutines from within your web application and there is any chance of a panic, you must make sure that you recover any panics from within those too. For example:
+
+```go
+func (app *application) myHandler(w http.ResponseWriter, r *http.Request) {
+    ...
+    // Spin up a new goroutine to do some background processing.
+    go func() {
+        defer func() {
+            if err := recover(); err != nil {
+                app.logger.Error(fmt.Sprint(err))
+            }
+        }()
+
+        doSomeBackgroundProcessing()
+    }()
+
+    w.Write([]byte("OK"))
+}
+```
+
+## 6.4 Composable middleware chains
+Introduce the [justinas/alice](https://github.com/justinas/alice) package to help us manage our middleware/handler chains.
+
+You don’t need to use this package, but the reason I recommend it is because it makes it easy to create composable, reusable, middleware chains — and that can be a real help as your application grows and your routes become more complex. The package itself is also small and lightweight, and the code is clear and well written.
+
+To demonstrate its features in one example, it allows you to rewrite a handler chain from this:
+```go
+return myMiddleware1(myMiddleware2(myMiddleware3(myHandler)))
+```
+
+Into this, which is a bit clearer to understand at a glance:
+```go
+return alice.New(myMiddleware1, myMiddleware2, myMiddleware3).Then(myHandler)
+```
+
+But the real power lies in the fact that you can use it to create middleware chains that can be assigned to variables, appended to, and reused. For example:
+```go
+myChain := alice.New(myMiddlewareOne, myMiddlewareTwo)
+myOtherChain := myChain.Append(myMiddleware3)
+return myOtherChain.Then(myHandler)
+```
