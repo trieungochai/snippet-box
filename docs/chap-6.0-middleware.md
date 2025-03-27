@@ -155,3 +155,25 @@ func (app *application) myHandler(w http.ResponseWriter, r *http.Request) {
     w.Write([]byte("OK"))
 }
 ```
+
+## 6.4 Composable middleware chains
+Introduce the [justinas/alice](https://github.com/justinas/alice) package to help us manage our middleware/handler chains.
+
+You don’t need to use this package, but the reason I recommend it is because it makes it easy to create composable, reusable, middleware chains — and that can be a real help as your application grows and your routes become more complex. The package itself is also small and lightweight, and the code is clear and well written.
+
+To demonstrate its features in one example, it allows you to rewrite a handler chain from this:
+```go
+return myMiddleware1(myMiddleware2(myMiddleware3(myHandler)))
+```
+
+Into this, which is a bit clearer to understand at a glance:
+```go
+return alice.New(myMiddleware1, myMiddleware2, myMiddleware3).Then(myHandler)
+```
+
+But the real power lies in the fact that you can use it to create middleware chains that can be assigned to variables, appended to, and reused. For example:
+```go
+myChain := alice.New(myMiddlewareOne, myMiddlewareTwo)
+myOtherChain := myChain.Append(myMiddleware3)
+return myOtherChain.Then(myHandler)
+```
