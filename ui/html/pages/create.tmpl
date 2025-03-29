@@ -1,4 +1,4 @@
-{{define "title"}}Create a New Snippet{{end}}
+{{define "title"}}Add a New Snippet{{end}}
 {{define "main"}}
 <form action='/snippet/create' method='POST'>
     <div>
@@ -11,9 +11,9 @@
     </div>
     <div>
         <label>Delete in:</label>
-        <input type='radio' name='expires' value='365' checked> One Year
-        <input type='radio' name='expires' value='7'> One Week
-        <input type='radio' name='expires' value='1'> One Day
+        <input type='radio' name='expires_at' value='365' checked> One Year
+        <input type='radio' name='expires_at' value='7'> One Week
+        <input type='radio' name='expires_at' value='1'> One Day
     </div>
     <div>
         <input type='submit' value='Publish snippet'>
