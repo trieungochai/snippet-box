@@ -85,7 +85,6 @@ if err != nil {
 title := r.Form.Get("title")
 ```
 
-
 In this code, the line r.Form.Get("title") will return the title value from the POST request body or from a query string parameter with the name title. In the event of a conflict, the request body value will take precedent over the query string parameter.
 
 Using r.Form can be very helpful if you want your application to be agnostic about how data values are passed to it. But outside of that scenario, r.Form doesn’t offer any benefits and it is clearer and more explicit to read data from the POST request body via r.PostForm or from query string parameters via `r.URL.Query().Get()`.
