@@ -9,12 +9,11 @@ import (
 )
 
 // Define a templateData type to act as the holding structure for any dynamic data that we want to pass to our HTML templates.
-// At the moment it only contains one field, but we'll add more to it as the build progresses.
 type templateData struct {
-	// Add a CurrentYear field to the templateData struct.
 	CurrentYear int
 	Snippet     models.Snippet
 	Snippets    []models.Snippet
+	Form        any
 }
 
 // Create a humanDate function which returns a nicely formatted string representation of a time.Time object.
