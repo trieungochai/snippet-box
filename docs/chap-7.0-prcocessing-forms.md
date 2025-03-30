@@ -88,3 +88,12 @@ title := r.Form.Get("title")
 In this code, the line r.Form.Get("title") will return the title value from the POST request body or from a query string parameter with the name title. In the event of a conflict, the request body value will take precedent over the query string parameter.
 
 Using r.Form can be very helpful if you want your application to be agnostic about how data values are passed to it. But outside of that scenario, r.Form doesn’t offer any benefits and it is clearer and more explicit to read data from the POST request body via r.PostForm or from query string parameters via `r.URL.Query().Get()`.
+
+### Restful routing
+If you’ve got a background in Ruby-on-Rails, Laravel or similar, you might be wondering why we haven’t structured our routes and handlers to be more ‘RESTful’ and look like this:
+
+![restful-routing](restful-routing.png)
+
+The first reason is because of overlapping routes — a HTTP request to `/snippets/create` potentially matches both the `GET /snippets/{id}` and `GET /snippets/create` routes. In our application, the snippet ID values are always numeric so there will never be a ‘real’ overlap between these two routes — but imagine if our snippet ID values were user-generated, or a random 6-character string, and hopefully you can see the potential for a problem. Generally speaking, overlapping routes can be a source of bugs and unexpected behavior in your application, and it’s good practice to avoid them if you can — or use them with care and caution if you can’t.
+
+The second reason is that the HTML form presented on `/snippets/create` would need to post to `/snippets` when submitted. This means that when we re-render the HTML form to show any validation errors, the URL in the user’s browser will also change to `/snippets`. YMMV on whether you consider this a problem or not — most users don’t look at URLs, but I think it’s a bit clunky and confusing in terms of “UX… especially if a GET request to /snippets normally renders something else (like a list of all snippets).
