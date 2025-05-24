@@ -77,29 +77,14 @@ func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request) {
-	// First we call r.ParseForm() which adds any data in POST request bodies to the r.PostForm map.
-	// If there are any errors, we use our app.ClientError() helper to
-	// send a 400 Bad Request response to the user.
-	err := r.ParseForm()
-	if err != nil {
-		app.clientError(w, http.StatusBadRequest)
-		return
-	}
-
-	// Declare a new empty instance of the snippetCreateForm struct.
 	var form snippetCreateForm
 
-	// Call the Decode() method of the form decoder,
-	// passing in the current request and *a pointer* to our snippetCreateForm struct.
-	// This will essentially fill our struct with the relevant values from the HTML form.
-	// If there is a problem, we return a 400 Bad Request response to the client.
-	err = app.formDecoder.Decode(&form, r.PostForm)
+	err := app.decodePostForm(r, &form)
 	if err != nil {
 		app.clientError(w, http.StatusBadRequest)
 		return
 	}
 
-	// Then validate and use the data as normal...
 	form.CheckField(validator.NotBlank(form.Title), "title", "This field cannot be blank")
 	form.CheckField(validator.MaxChars(form.Title, 100), "title", "This field cannot be more than 100 characters long")
 	form.CheckField(validator.NotBlank(form.Content), "content", "This field cannot be blank")
