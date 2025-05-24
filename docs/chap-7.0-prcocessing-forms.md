@@ -97,3 +97,55 @@ If you’ve got a background in Ruby-on-Rails, Laravel or similar, you might be 
 The first reason is because of overlapping routes — a HTTP request to `/snippets/create` potentially matches both the `GET /snippets/{id}` and `GET /snippets/create` routes. In our application, the snippet ID values are always numeric so there will never be a ‘real’ overlap between these two routes — but imagine if our snippet ID values were user-generated, or a random 6-character string, and hopefully you can see the potential for a problem. Generally speaking, overlapping routes can be a source of bugs and unexpected behavior in your application, and it’s good practice to avoid them if you can — or use them with care and caution if you can’t.
 
 The second reason is that the HTML form presented on `/snippets/create` would need to post to `/snippets` when submitted. This means that when we re-render the HTML form to show any validation errors, the URL in the user’s browser will also change to `/snippets`. YMMV on whether you consider this a problem or not — most users don’t look at URLs, but I think it’s a bit clunky and confusing in terms of “UX… especially if a GET request to /snippets normally renders something else (like a list of all snippets).
+
+### Generics
+Go 1.18 was the first version of the language to support generics — also known by the more technical name of `parametric polymorphism`. Very broadly, generics allow you to write code that works with `different concrete types`.
+
+For example, in older versions of Go, if you wanted to count how many times a particular value appears in a `[]string slice` and an `[]int slice` you would need to write two separate functions — one function for the `[]string` type and another for the `[]int`.
+
+```go
+// Count how many times the value v appears in the slice s.
+func countString(v string, s []string) int {
+    count := 0
+    for _, vs := range s {
+        if v == vs {
+            count++
+        }
+    }
+    return count
+}
+
+func countInt(v int, s []int) int {
+    count := 0
+    for _, vs := range s {
+        if v == vs {
+            count++
+        }
+    }
+    return count
+}
+```
+
+Now, with generics, it’s possible to write a single `count()` function that will work for []string, []int, or any other slice of a [comparable type](https://pkg.go.dev/builtin#comparable).
+```go
+func count[T comparable](v T, s []T) int {
+    count := 0
+    for _, vs := range s {
+        if v == vs {
+            count++
+        }
+    }
+    return count
+}
+```
+
+You don’t need to use generics, and it’s OK not to.
+
+But even with those caveats, writing generic code can be really useful in certain scenarios. Very generally speaking, you might want to consider it:
+- If you find yourself writing repeated boilerplate code for different data types. Examples of this might be common operations on slices, maps or channels — or helpers for carrying out validation checks or test assertions on different data types.
+- When you are writing code and find yourself reaching for the any (empty interface{}) type. An example of this might be when you are creating a data structure (like a queue, cache or linked list) which needs to operate on different types.
+
+In contrast, you probably don’t want to use generics:
+- If it makes your code harder to understand or less clear.
+- If all the types that you need to work with have a common set of methods — in which case it’s better to define and use a normal interface type instead.
+- Just because you can. Prefer instead write non-generic code by default, and switch to a generic version later only if it is actually needed.
