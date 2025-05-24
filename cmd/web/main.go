@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/go-playground/form"
 	_ "github.com/go-sql-driver/mysql"
 	"snippetbox.t10i.net/internal/models"
 )
@@ -16,10 +17,12 @@ import (
 // Add a snippets field to the application struct.
 // This will allow us to make the SnippetModel object available to our handlers.
 // Add a templateCache field to the application struct.
+// Add a formDecoder field to hold a pointer to a form.Decoder instance.
 type application struct {
 	logger        *slog.Logger
 	snippets      *models.SnippetModel
 	templateCache map[string]*template.Template
+	formDecoder   *form.Decoder
 }
 
 func main() {
@@ -63,6 +66,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Initialize a decoder instance...
+	formDecoder := form.NewDecoder()
+
 	// Init a new instance of our application struct, containing the dependencies
 	// Init a models.SnippetModel instance containing the connection pool and add it to the application dependencies.
 	// And add it to the application dependencies.
@@ -70,6 +76,7 @@ func main() {
 		logger:        logger,
 		snippets:      &models.SnippetModel{DB: db},
 		templateCache: templateCache,
+		formDecoder:   formDecoder,
 	}
 
 	logger.Info("starting server", "addr", *addr)

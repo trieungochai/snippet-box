@@ -7,10 +7,21 @@ import (
 	"strconv"
 
 	"snippetbox.t10i.net/internal/models"
+	"snippetbox.t10i.net/internal/validator"
 )
 
-// Change the signature of the home handler
-// so it is defined as a method against *application.
+// Update our snippetCreateForm struct to include struct tags which tell the
+// decoder how to map HTML form values into the different struct fields.
+// So, for example, here we're telling the decoder to store the value from the HTML form
+// input with the name "title" in the Title field.
+// The struct tag `form:"-"` tells the decoder to completely ignore a field during decoding.
+type snippetCreateForm struct {
+	Title               string `form:"title"`
+	Content             string `form:"content"`
+	ExpiresAt           int    `form:"expires_at"`
+	validator.Validator `form:"-"`
+}
+
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	snippets, err := app.snippets.Latest()
 	if err != nil {
@@ -52,22 +63,44 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 	app.render(w, r, http.StatusOK, "view.tmpl", data)
 }
 
-// Change the signature of the home handler
-// so it is defined as a method against *application.
 func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Display a form for creating a new snippet..."))
+	data := app.newTemplateData(r)
+
+	// Initialize a new createSnippetForm instance and pass it to the template.
+	// Notice how this is also a great opportunity to set any default or 'initial' values for the form
+	// --- here we set the initial value for the snippet expiry to 365 days.
+	data.Form = snippetCreateForm{
+		ExpiresAt: 365,
+	}
+
+	app.render(w, r, http.StatusOK, "create.tmpl", data)
 }
 
-// Change the signature of the home handler
-// so it is defined as a method against *application.
 func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request) {
-	// Create some variables holding dummy data. We'll remove these later on during the build.
-	title := "0 snail"
-	content := "O snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n– Kobayashi Issa"
-	expires_at := 7
+	var form snippetCreateForm
+
+	err := app.decodePostForm(r, &form)
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	form.CheckField(validator.NotBlank(form.Title), "title", "This field cannot be blank")
+	form.CheckField(validator.MaxChars(form.Title, 100), "title", "This field cannot be more than 100 characters long")
+	form.CheckField(validator.NotBlank(form.Content), "content", "This field cannot be blank")
+	form.CheckField(validator.PermittedValue(form.ExpiresAt, 1, 7, 365), "expires_at", "This field must equal 1, 7 or 365")
+
+	// Use the Valid() method to see if any of the checks failed.
+	// If they did, then re-render the template passing in the form in the same way as before.
+	if !form.Valid() {
+		data := app.newTemplateData(r)
+		data.Form = form
+		app.render(w, r, http.StatusUnprocessableEntity, "create.tmpl", data)
+		return
+	}
 
 	// Pass the data to the SnippetModel.Insert() method, receiving the ID of the new record back.
-	id, err := app.snippets.Insert(title, content, expires_at)
+	id, err := app.snippets.Insert(form.Title, form.Content, form.ExpiresAt)
 	if err != nil {
 		app.serverError(w, r, err)
 		return
